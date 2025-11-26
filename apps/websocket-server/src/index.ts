@@ -209,6 +209,26 @@ async function process() {
           }
         });
       }
+
+      // handle chat message and broadcast to all users in the room
+      if (data.type === "chat") {
+        const chatMessage = {
+          userId: userId,
+          userName: name,
+          message: data.message,
+          timestamp: new Date().toISOString(),
+        };
+
+        // Broadcast to all users in the room (including sender)
+        rooms[roomId].forEach((user: any) => {
+          user.ws.send(
+            JSON.stringify({
+              type: "chat",
+              chatMessage: chatMessage,
+            })
+          );
+        });
+      }
     });
 
     ws.on("close", () => {

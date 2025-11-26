@@ -10,7 +10,7 @@
 
 ## set up and run
 ```bash
-cd ./app
+cd ./apps
 ```
 write to all 4 services. 
 ```bash

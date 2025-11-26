@@ -7,6 +7,7 @@ import { socketAtom } from "../atoms/socketAtom";
 import { useNavigate, useParams } from "react-router-dom";
 import { connectedUsersAtom } from "../atoms/connectedUsersAtom";
 import { IP_ADDRESS } from "../Globle";
+import Chat from "../components/Chat";
 
 // AI Message type
 type AiMessage = {
@@ -47,6 +48,9 @@ const CodeEditor: React.FC = () => {
   // multiplayer state
   const [connectedUsers, setConnectedUsers] = useRecoilState<any[]>(connectedUsersAtom);
   const params = useParams();
+  
+  // Chat state
+  const [chatId, setChatId] = useState<string>("");
 
   // Handle Ctrl+Enter to run code
   useEffect(() => {
@@ -66,6 +70,27 @@ const CodeEditor: React.FC = () => {
     };
   }, [isLoading, code, activeSession]); // Rerun if dependencies change
 
+
+  // Fetch room data to get chatId
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      if (user.roomId) {
+        try {
+          const response = await fetch(`http://${IP_ADDRESS}:3000/room/${user.roomId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.room && data.room.chatId) {
+              setChatId(data.room.chatId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching room data:", error);
+        }
+      }
+    };
+
+    fetchRoomData();
+  }, [user.roomId, IP_ADDRESS]);
 
   // WebSocket connection logic
   useEffect(() => {
@@ -184,45 +209,35 @@ const CodeEditor: React.FC = () => {
     setAiInput("");
     setIsAiLoading(true);
 
-    // System prompt to guide the AI's behavior
-    const systemPrompt = `You are an expert programming tutor. Your goal is to help a student learn by guiding them to the solution, not giving it away.
-    Analyze the user's code, their provided input, and the resulting output.
-    Provide hints, ask leading questions, and explain concepts.
-    Do not write the correct code for them unless they are completely stuck and explicitly ask for the solution.
-    Keep your responses concise and encouraging.`;
-    const userQuery = `
-      Here is my current situation:
-      Language: ${language}
-      Code:\n\`\`\`${language}\n${code}\n\`\`\`
-      Input given to the code:\n\`\`\`\n${activeSession.input || "No input provided."}\n\`\`\`
-      Output from the code:\n\`\`\`\n${activeSession.output.join('\n') || "No output yet."}\n\`\`\`
-      My question is: ${currentAiInput}
-    `;
+    // Prepare the payload for the backend
+    const aiSubmission = {
+      userQuery: currentAiInput,
+      language: language,
+      code: code,
+      input: activeSession.input,
+      output: activeSession.output.join('\n') // Send joined output
+    };
 
     try {
-      const apiKey = "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-      const payload = {
-        contents: [{ parts: [{ text: userQuery }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-      };
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const res = await fetch(`http://${IP_ADDRESS}:3000/ai-tutor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(aiSubmission),
       });
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
-      const result = await response.json();
-      const candidate = result.candidates?.[0];
-      const aiResponseText = candidate?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
-      setAiMessages(prev => [...prev, { sender: 'ai', text: aiResponseText }]);
+
+      if (!res.ok) {
+        throw new Error(`Server responded with status: ${res.status}`);
+      }
+
+      const { aiResponseText } = await res.json();
+      setAiMessages(prev => [...prev, { sender: 'ai', text: aiResponseText || "Sorry, I couldn't generate a response." }]);
     } catch (error) {
-      console.error("Error calling Gemini API:", error);
-      setAiMessages(prev => [...prev, { sender: 'ai', text: "Error connecting to the AI assistant." }]);
+      console.error("Error communicating with AI service:", error);
+      setAiMessages(prev => [...prev, { sender: 'ai', text: "Error connecting to the AI assistant via the server." }]);
     } finally {
       setIsAiLoading(false);
     }
-  };
+};
 
   const handleCopy = () => {
     navigator.clipboard.writeText(user.roomId);
@@ -268,7 +283,7 @@ const CodeEditor: React.FC = () => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "submitBtnStatus", value, isLoading, roomId: user.roomId }));
   }
 
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  const handleEditorDidMount = (editor: any) => {
     editor.onDidChangeModelContent(() => {
       const currentCode = editor.getValue();
       if (currentCode !== code && socket?.readyState === WebSocket.OPEN) {
@@ -320,8 +335,9 @@ const CodeEditor: React.FC = () => {
         </div>
 
         <div className="w-full lg:w-1/3 flex flex-col gap-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-2xl flex flex-col flex-grow h-1/2">
-            <h2 className="text-xl font-bold text-gray-300 p-3 border-b border-gray-800">AI Assistant</h2>
+          <div className="flex gap-4 h-1/2">
+            <div className="w-1/2 bg-gray-900 border border-gray-800 rounded-lg shadow-2xl flex flex-col">
+              <h2 className="text-xl font-bold text-gray-300 p-3 border-b border-gray-800">AI Assistant</h2>
             <div className="flex-grow p-4 overflow-y-auto space-y-4">
               {aiMessages.length > 0 ? (
                 aiMessages.map((msg, index) => (
@@ -358,6 +374,18 @@ const CodeEditor: React.FC = () => {
                 <AiOutlineSend size={20} />
               </button>
             </form>
+            </div>
+            {chatId && (
+              <div className="w-1/2">
+                <Chat
+                  socket={socket}
+                  chatId={chatId}
+                  userId={user.id}
+                  userName={user.name}
+                  IP_ADDRESS={IP_ADDRESS}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex-grow flex flex-col gap-4 h-1/2">
