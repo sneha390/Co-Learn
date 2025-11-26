@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useRecoilState } from 'recoil';
 import { userAtom } from '../atoms/userAtom';
+import { authAtom, AuthUser } from '../atoms/authAtom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { socketAtom } from '../atoms/socketAtom';
-import { IP_ADDRESS } from '../Globle'; // Assuming this file exists and exports the IP
+import { IP_ADDRESS } from '../Globle';
+import AuthModal from '../components/AuthModal';
 
 // --- Helper Components & Icons ---
 
@@ -18,68 +20,192 @@ const FeatureIcon = ({ children }: { children: React.ReactNode }) => (
 );
 
 const Register = () => {
-    const [name, setName] = useState<string>("");
     const [roomId, setRoomId] = useState<string>("");
     const [error, setError] = useState<string>("");
     
     const params = useParams();
-    const [user, setUser] = useRecoilState(userAtom);
+    const [, setUser] = useRecoilState(userAtom);
+    const [auth, setAuth] = useRecoilState(authAtom);
     const [socket, setSocket] = useRecoilState<WebSocket | null>(socketAtom);
     const [loading, setLoading] = useState<boolean>(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         document.title = "CoLearn - Collaborative Coding";
         // Pre-fill room ID from the URL parameter
         setRoomId(params.roomId || "");
-    }, [params.roomId]);
 
-    const generateId = () => {
-        return Math.floor(Math.random() * 100000).toString();
-    }
+        // Check for existing auth token
+        const token = localStorage.getItem("authToken");
+        const storedUser = localStorage.getItem("user");
+
+        if (token && storedUser) {
+            try {
+                const userData = JSON.parse(storedUser);
+                setAuth({
+                    isAuthenticated: true,
+                    user: userData,
+                    token: token,
+                });
+                // Verify token with backend
+                verifyToken(token);
+            } catch (error) {
+                console.error("Error parsing stored user:", error);
+                localStorage.removeItem("authToken");
+                localStorage.removeItem("user");
+            }
+        } else {
+            setShowAuthModal(true);
+        }
+    }, [params.roomId, setAuth]);
+
+    const verifyToken = async (token: string) => {
+        try {
+            const response = await fetch(`http://${IP_ADDRESS}:3000/auth/verify`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Token invalid");
+            }
+
+            const data = await response.json();
+            setAuth({
+                isAuthenticated: true,
+                user: data.user,
+                token: token,
+            });
+        } catch (error) {
+            console.error("Token verification failed:", error);
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
+            setAuth({
+                isAuthenticated: false,
+                user: null,
+                token: null,
+            });
+            setShowAuthModal(true);
+        }
+    };
+
+    const handleAuthSuccess = (token: string, userData: AuthUser) => {
+        setAuth({
+            isAuthenticated: true,
+            user: userData,
+            token: token,
+        });
+        setShowAuthModal(false);
+    };
+
 
     // This is your original, working socket logic
-    const initializeSocket = (isJoining = false) => {
+    const initializeSocket = async (isJoining = false) => {
         setError(""); // Clear previous errors
-        if (name.trim() === "") {
-            setError("Please enter a name to continue.");
+
+        // Check authentication
+        if (!auth.isAuthenticated || !auth.user || !auth.token) {
+            setShowAuthModal(true);
             return;
         }
+
         if (isJoining && (roomId.trim() === "" || roomId.length !== 6)) {
             setError("Please enter a valid 6-digit Room ID to join.");
             return;
         }
 
         setLoading(true);
-        let generatedId = "";
-        if (user.id === "") {
-            generatedId = generateId();
+        const userId = auth.user.id;
+        const userName = auth.user.name;
+        let finalRoomId = roomId;
+
+        try {
+            // Create or join room in MongoDB
+            if (isJoining) {
+                // Join existing room
+                const joinResponse = await fetch(`http://${IP_ADDRESS}:3000/room/join`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${auth.token}`,
+                    },
+                    body: JSON.stringify({
+                        roomId: roomId,
+                    }),
+                });
+
+                if (!joinResponse.ok) {
+                    const errorData = await joinResponse.json();
+                    setError(errorData.error || "Failed to join room. Please check the Room ID.");
+                    setLoading(false);
+                    return;
+                }
+
+                const joinData = await joinResponse.json();
+                finalRoomId = joinData.room.roomId;
+            } else {
+                // Create new room - WebSocket will generate roomId
+                // We'll create it after WebSocket connection
+            }
+        } catch (error) {
+            console.error("Error creating/joining room:", error);
+            setError("Failed to connect to the server. Please try again.");
+            setLoading(false);
+            return;
         }
 
         if (!socket || socket.readyState === WebSocket.CLOSED) {
-            const u = {
-                id: user.id === "" ? generatedId : user.id,
-                name: name
-            };
-            
-            const ws = new WebSocket(`ws://${IP_ADDRESS}:5000?roomId=${roomId}&id=${u.id}&name=${u.name}`);
+            const ws = new WebSocket(`ws://${IP_ADDRESS}:5000?roomId=${finalRoomId}&id=${userId}&name=${userName}`);
             setSocket(ws);
 
             ws.onopen = () => {
                 console.log("Connected to WebSocket");
             };
 
-            ws.onmessage = (event) => {
+            ws.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
                 if (data.type === "roomId") {
-                    setUser({
-                        id: user.id === "" ? generatedId : user.id,
-                        name: name,
-                        roomId: data.roomId
-                    });
-                    setLoading(false);
-                    console.log("Server Message: ", data.message); // Log instead of alert
-                    navigate("/code/" + data.roomId);
+                    const roomIdFromServer = data.roomId;
+                    
+                    try {
+                        if (!isJoining) {
+                            // Create room in MongoDB for new rooms
+                            const createResponse = await fetch(`http://${IP_ADDRESS}:3000/room/create`, {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${auth.token}`,
+                                },
+                                body: JSON.stringify({
+                                    roomId: roomIdFromServer,
+                                }),
+                            });
+
+                            if (!createResponse.ok) {
+                                setError("Failed to create room in database.");
+                                setLoading(false);
+                                ws.close();
+                                return;
+                            }
+                        }
+
+                        // Set user and navigate for both create and join
+                        setUser({
+                            id: userId,
+                            name: userName,
+                            roomId: roomIdFromServer
+                        });
+                        setLoading(false);
+                        console.log("Server Message: ", data.message);
+                        navigate("/code/" + roomIdFromServer);
+                    } catch (error) {
+                        console.error("Error handling room:", error);
+                        setError("Failed to process room.");
+                        setLoading(false);
+                        ws.close();
+                    }
                 } else if (data.type === 'error') {
                     setError(data.message);
                     setLoading(false);
@@ -132,23 +258,36 @@ const Register = () => {
                 {/* Right Side: Join/Create Room Form */}
                 <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 p-8 rounded-2xl shadow-2xl">
                     <h2 className="text-2xl font-bold mb-6 text-center">Join or Create a Room</h2>
-                    <div className="space-y-6">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Name</label>
-                            <input type="text" id="name" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" />
+                    {auth.isAuthenticated && auth.user && (
+                        <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
+                            <p className="text-sm text-gray-400">Signed in as</p>
+                            <p className="text-white font-semibold">{auth.user.name}</p>
+                            <p className="text-xs text-gray-500">{auth.user.email}</p>
                         </div>
+                    )}
+                    <div className="space-y-6">
                         <div>
                             <label htmlFor="roomId" className="block text-sm font-medium text-gray-400 mb-2">Room ID (for joining)</label>
                             <input type="text" id="roomId" placeholder="Enter 6-digit Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200" />
                         </div>
                         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
                         <div className="flex flex-col space-y-4 pt-2">
-                            <button disabled={loading} onClick={handleJoinRoom} className="w-full h-12 flex items-center justify-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-transform duration-300 transform hover:scale-105">{loading ? <Spinner /> : 'Join Room'}</button>
-                            <button disabled={loading} onClick={handleCreateRoom} className="w-full h-12 flex items-center justify-center py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-transform duration-300 transform hover:scale-105">{loading ? <Spinner /> : 'Create New Room'}</button>
+                            <button disabled={loading || !auth.isAuthenticated} onClick={handleJoinRoom} className="w-full h-12 flex items-center justify-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-transform duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">{loading ? <Spinner /> : 'Join Room'}</button>
+                            <button disabled={loading || !auth.isAuthenticated} onClick={handleCreateRoom} className="w-full h-12 flex items-center justify-center py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-transform duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">{loading ? <Spinner /> : 'Create New Room'}</button>
                         </div>
                     </div>
                 </div>
             </main>
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => {
+                    if (auth.isAuthenticated) {
+                        setShowAuthModal(false);
+                    }
+                }}
+                onSuccess={handleAuthSuccess}
+                IP_ADDRESS={IP_ADDRESS}
+            />
         </div>
     );
 };

@@ -8,5 +8,16 @@ services:
     volumes:
       - colearn-redis-data:/data
 
+  mongodb:
+    image: mongo:7
+    container_name: colearn-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - colearn-mongodb-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: colearn
+
 volumes:
   colearn-redis-data:
+  colearn-mongodb-data:
