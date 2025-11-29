@@ -9,11 +9,10 @@ const pubSubClient = createClient();
 // Storage for rooms and their users
 const rooms: any = {};
 
-// Helper to generate a unique 6-digit room ID
 function generateRoomId() {
   let id;
   do {
-    id = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit random number
+    id = Math.floor(100000 + Math.random() * 900000).toString(); 
   } while (rooms[id]);
   return id;
 }

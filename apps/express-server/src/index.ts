@@ -129,22 +129,15 @@ app.get("/auth/verify", authenticateToken, async (req: AuthRequest, res) => {
 
 app.post('/ai-tutor', async (req, res) => {
   const { userQuery, language, code, input, output } = req.body;
-
-  // Basic validation
   if (!userQuery || !language || !code) {
       return res.status(400).json({ error: "Missing required fields: userQuery, language, or code." });
   }
-
   try {
-      // Call the AI service function with the request data
       const aiResponseText = await getAiTutorResponse({ userQuery, language, code, input, output });
-
-      // Send the AI's response back to the frontend
       res.status(200).json({ aiResponseText });
 
   } catch (error) {
       console.error("AI Tutor endpoint failed:", error);
-      // Send a generic error message to the client
       res.status(500).json({ error: "An internal server error occurred while processing the AI request." });
   }
 });
@@ -156,17 +149,13 @@ app.post("/submit", async (req, res) => {
   console.log(`Received submission from room ${roomId}`);
 
   try {
-    // Push submission to Redis
     await redisClient.lPush(
       "problems",
       JSON.stringify({ code, language, roomId, submissionId, input, sessionId })
     );
-
     console.log(
       `Submission pushed to Redis for: ${roomId}  and problem id: ${submissionId}`
     );
-
-    // Update code in database
     const room = await Room.findOne({ roomId });
     if (room) {
       await Code.findOneAndUpdate(
@@ -174,7 +163,6 @@ app.post("/submit", async (req, res) => {
         { sourceCode: code, language }
       );
     }
-
     res.status(200).send("Submission received and stored");
   } catch (error) {
     console.log(error);
