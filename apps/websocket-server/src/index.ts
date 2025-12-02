@@ -33,8 +33,8 @@ async function process() {
     console.log("Room id", roomId);
     console.log("Name", name);
 
-    // If no roomId, generate a new roomId and add the user as the first member
-    if (roomId == null || roomId == "" || !rooms[roomId]) {
+    // If no roomId provided, generate a new roomId
+    if (roomId == null || roomId == "") {
       roomId = generateRoomId();
       rooms[roomId] = [];
       ws.send(
@@ -47,6 +47,12 @@ async function process() {
       );
       console.log(`Created new room with ID: ${roomId}`);
     } else {
+      // RoomId provided - create room entry in memory if it doesn't exist
+      // (room existence is validated by database on frontend via /room/join)
+      if (!rooms[roomId]) {
+        rooms[roomId] = [];
+        console.log(`Creating room entry in memory for existing room: ${roomId}`);
+      }
       console.log(`Joining room with ID: ${roomId}`);
       ws.send(
         JSON.stringify({

@@ -28,6 +28,7 @@ const Register = () => {
     const [error, setError] = useState<string>("");
     const [isAccountOpen, setIsAccountOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [hasAutoJoined, setHasAutoJoined] = useState(false);
     
     const params = useParams();
     const [, setUser] = useRecoilState(userAtom);
@@ -67,6 +68,23 @@ const Register = () => {
             setShowAuthModal(true);
         }
     }, [params.roomId, setAuth]);
+
+    // Auto-join room if roomId is in URL and user is authenticated
+    useEffect(() => {
+        if (params.roomId && auth.isAuthenticated && auth.user && auth.token && !loading && !socket && !hasAutoJoined) {
+            // Room ID is in URL and user is authenticated - auto-join
+            const roomIdFromUrl = params.roomId.trim();
+            if (roomIdFromUrl.length === 6) {
+                setRoomId(roomIdFromUrl);
+                setHasAutoJoined(true);
+                // Small delay to ensure state is set
+                const timer = setTimeout(() => {
+                    initializeSocket(true);
+                }, 100);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [params.roomId, auth.isAuthenticated, auth.user, auth.token, loading, socket, hasAutoJoined]);
 
     const verifyToken = async (token: string) => {
         try {

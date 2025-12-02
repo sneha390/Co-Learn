@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useRecoilState, useRecoilValue } from "recoil";
+import { useRecoilState } from "recoil";
 import { authAtom } from "../atoms/authAtom";
 import { userAtom } from "../atoms/userAtom";
 import { sidebarOpenAtom } from "../atoms/sidebarAtom";
@@ -52,11 +52,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleRoomClick = (roomId: string) => {
-    if (location.pathname.startsWith("/code/")) {
-      navigate(`/code/${roomId}`);
-    } else {
-      navigate(`/${roomId}`);
-    }
+    // Open room in new tab
+    const url = location.pathname.startsWith("/code/") 
+      ? `/code/${roomId}` 
+      : `/${roomId}`;
+    
+    // Open in new tab
+    window.open(url, '_blank');
   };
 
   return (
@@ -71,9 +73,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col transform transition-transform lg:static ${
-          isOpen ? "translate-x-0 lg:translate-x-0" : "-translate-x-full lg:-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col transform transition-transform 
+  ${isOpen
+            ? "translate-x-0 lg:translate-x-0 lg:static" // Open: Static position (takes up space)
+            : "-translate-x-full lg:hidden"              // Closed: Hidden on desktop (removes space)
+          }`}
       >
         <div className="flex items-center justify-between mb-4">
           <div>

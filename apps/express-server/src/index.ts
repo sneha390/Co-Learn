@@ -8,6 +8,7 @@ import Room from "./models/Room";
 import User from "./models/User";
 import Code from "./models/Code";
 import Notes from "./models/Notes";
+import AiMessage from "./models/AiMessage";
 import { v4 as uuidv4 } from "uuid";
 import { generateToken, authenticateToken, AuthRequest } from "./utils/auth";
 
@@ -128,12 +129,35 @@ app.get("/auth/verify", authenticateToken, async (req: AuthRequest, res) => {
 });
 
 app.post('/ai-tutor', async (req, res) => {
-  const { userQuery, language, code, input, output } = req.body;
+  const { userQuery, language, code, input, output, roomId } = req.body;
   if (!userQuery || !language || !code) {
       return res.status(400).json({ error: "Missing required fields: userQuery, language, or code." });
   }
   try {
       const aiResponseText = await getAiTutorResponse({ userQuery, language, code, input, output });
+      
+      // Save user message and AI response to database if roomId is provided
+      if (roomId) {
+        try {
+          const userMessage = new AiMessage({
+            roomId,
+            sender: 'user',
+            text: userQuery,
+          });
+          await userMessage.save();
+
+          const aiMessage = new AiMessage({
+            roomId,
+            sender: 'ai',
+            text: aiResponseText,
+          });
+          await aiMessage.save();
+        } catch (dbError) {
+          console.error("Error saving AI messages to database:", dbError);
+          // Don't fail the request if DB save fails
+        }
+      }
+      
       res.status(200).json({ aiResponseText });
 
   } catch (error) {
@@ -350,6 +374,50 @@ app.get("/room/:roomId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching room:", error);
     res.status(500).json({ error: "Failed to fetch room" });
+  }
+});
+
+// Get all room data (code, language, AI messages, chat)
+app.get("/room/:roomId/data", async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    const room = await Room.findOne({ roomId });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+
+    // Fetch code
+    const code = await Code.findOne({ codeId: room.codeId });
+    
+    // Fetch AI messages
+    const aiMessages = await AiMessage.find({ roomId })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    // Fetch chat messages
+    const chatMessages = await ChatMessage.find({ chatId: room.chatId })
+      .sort({ timestamp: 1 })
+      .limit(50)
+      .exec();
+
+    res.status(200).json({
+      code: code?.sourceCode || "// Write your code here...",
+      language: code?.language || "javascript",
+      aiMessages: aiMessages.map(msg => ({
+        sender: msg.sender,
+        text: msg.text,
+      })),
+      chatMessages: chatMessages.map(msg => ({
+        userId: msg.userId,
+        userName: msg.userName,
+        message: msg.message,
+        timestamp: msg.timestamp,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching room data:", error);
+    res.status(500).json({ error: "Failed to fetch room data" });
   }
 });
 

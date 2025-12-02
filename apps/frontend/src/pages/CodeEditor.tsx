@@ -15,6 +15,8 @@ import AccountModal from "../components/AccountModal";
 import SettingsModal from "../components/SettingsModal";
 import { themeAtom } from "../atoms/themeAtom";
 import { sidebarOpenAtom } from "../atoms/sidebarAtom";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // AI Message type
 type AiMessage = {
@@ -92,33 +94,71 @@ const CodeEditor: React.FC = () => {
   }, [isLoading, code, activeSession]); // Rerun if dependencies change
 
 
-  // Fetch room data to get chatId
+  // Fetch room data to get chatId and load room data
   useEffect(() => {
+    const effectiveRoomId = user.roomId || params.roomId;
+    if (!effectiveRoomId) return;
+
     const fetchRoomData = async () => {
-      if (user.roomId) {
-        try {
-          const response = await fetch(`http://${IP_ADDRESS}:3000/room/${user.roomId}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.room && data.room.chatId) {
-              setChatId(data.room.chatId);
-            }
+      try {
+        // Get room info for chatId
+        const roomResponse = await fetch(`http://${IP_ADDRESS}:3000/room/${effectiveRoomId}`);
+        if (roomResponse.ok) {
+          const roomData = await roomResponse.json();
+          if (roomData.room && roomData.room.chatId) {
+            setChatId(roomData.room.chatId);
           }
-        } catch (error) {
-          console.error("Error fetching room data:", error);
         }
+
+        // Get all room data (code, language, AI messages)
+        // Load from database if WebSocket hasn't synced yet (initial page load)
+        const dataResponse = await fetch(`http://${IP_ADDRESS}:3000/room/${effectiveRoomId}/data`);
+        if (dataResponse.ok) {
+          const data = await dataResponse.json();
+          
+          // Load code and language from database (will be overridden by WebSocket sync if connected)
+          if (data.code !== undefined) {
+            setCode(data.code);
+          }
+          if (data.language) {
+            setLanguage(data.language);
+          }
+          
+          // Always load AI messages from database (they're not synced via WebSocket)
+          if (data.aiMessages && Array.isArray(data.aiMessages)) {
+            setAiMessages(data.aiMessages);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching room data:", error);
       }
     };
 
     fetchRoomData();
-  }, [user.roomId, IP_ADDRESS]);
+  }, [user.roomId, params.roomId, IP_ADDRESS]);
 
   // WebSocket connection logic
   useEffect(() => {
-    if (!socket) {
-      navigate("/" + params.roomId);
+    const effectiveRoomId = user.roomId || params.roomId;
+    
+    // If no socket and we have a roomId in URL, redirect to Register to join
+    if (!socket && effectiveRoomId) {
+      navigate("/" + effectiveRoomId);
+      return;
     }
-    else {
+    
+    // If we have a socket but user.roomId doesn't match params.roomId, we need to reconnect
+    if (socket && params.roomId && user.roomId !== params.roomId) {
+      // Close existing socket and redirect to join the new room
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+      setSocket(null);
+      navigate("/" + params.roomId);
+      return;
+    }
+    
+    if (socket) {
       socket.send(JSON.stringify({ type: "requestToGetUsers", userId: user.id }));
       socket.send(JSON.stringify({ type: "requestForAllData" }));
       socket.onclose = () => {
@@ -127,12 +167,13 @@ const CodeEditor: React.FC = () => {
         setSocket(null);
       }
     }
+    
     return () => {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();
       }
     };
-  }, []);
+  }, [socket, params.roomId, user.roomId]);
 
 
   useEffect(() => {
@@ -315,7 +356,43 @@ const CodeEditor: React.FC = () => {
                 <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                   {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center font-bold">A</div>}
                   <div className={`max-w-xs md:max-w-md lg:max-w-sm rounded-lg px-4 py-2 ${msg.sender === 'user' ? 'bg-gray-700' : 'bg-gray-800'}`}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                    {msg.sender === 'ai' ? (
+                      <div className="text-sm prose prose-invert prose-sm max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code: ({ node, inline, className, children, ...props }: any) => {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return !inline && match ? (
+                                <pre className="bg-gray-900 rounded p-2 overflow-x-auto my-2">
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                </pre>
+                              ) : (
+                                <code className="bg-gray-900 px-1 py-0.5 rounded text-xs" {...props}>
+                                  {children}
+                                </code>
+                              );
+                            },
+                            p: ({ children }: any) => <p className="mb-2 last:mb-0">{children}</p>,
+                            ul: ({ children }: any) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                            ol: ({ children }: any) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                            li: ({ children }: any) => <li className="text-sm">{children}</li>,
+                            h1: ({ children }: any) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                            h2: ({ children }: any) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                            h3: ({ children }: any) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                            strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
+                            em: ({ children }: any) => <em className="italic">{children}</em>,
+                            blockquote: ({ children }: any) => <blockquote className="border-l-4 border-gray-600 pl-3 italic my-2">{children}</blockquote>,
+                          }}
+                        >
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                    )}
                   </div>
                 </div>
               ))
@@ -434,12 +511,14 @@ const CodeEditor: React.FC = () => {
     setIsAiLoading(true);
 
     // Prepare the payload for the backend
+    const effectiveRoomId = user.roomId || params.roomId;
     const aiSubmission = {
       userQuery: currentAiInput,
       language: language,
       code: code,
       input: activeSession.input,
-      output: activeSession.output.join('\n') // Send joined output
+      output: activeSession.output.join('\n'), // Send joined output
+      roomId: effectiveRoomId // Include roomId to save messages
     };
 
     try {
