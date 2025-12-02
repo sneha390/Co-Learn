@@ -291,8 +291,8 @@ const CodeEditor: React.FC = () => {
   };
 
   const renderIoPanelRight = () => (
-    <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
-      <h2 className={`text-xl font-bold p-3 border-b ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>
+    <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200"} border-2 rounded-lg shadow-2xl flex flex-col h-full transition-all duration-200`}>
+      <h2 className={`text-xl font-bold p-3 border-b ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-blue-200 bg-blue-100/50"}`}>
         Test Cases (Input / Output)
       </h2>
       <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
@@ -303,7 +303,7 @@ const CodeEditor: React.FC = () => {
               value={activeSession.input}
               onChange={handleInputChange}
               placeholder="Enter input..."
-              className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-50 border-gray-300 text-gray-900"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs h-32`}
+              className={`${isDark ? "bg-gray-800 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-blue-400"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs h-32 transition`}
             />
           </div>
           <div className="flex flex-col">
@@ -322,7 +322,7 @@ const CodeEditor: React.FC = () => {
                 Clear
               </button>
             </div>
-            <div className={`${isDark ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-300"} border text-green-600 p-2 rounded-md overflow-y-auto font-mono text-xs min-h-[6rem]`}>
+            <div className={`${isDark ? "bg-gray-800 border-gray-700" : "bg-gray-100 border-gray-300"} border text-green-600 p-2 rounded-md overflow-y-auto font-mono text-xs min-h-[6rem] transition`}>
               {activeSession.output.length > 0 ? (
                 activeSession.output.map((line, index) => (
                   <pre key={index} className="whitespace-pre-wrap">
@@ -346,8 +346,8 @@ const CodeEditor: React.FC = () => {
 
     if (activePanel === "ai") {
       return (
-        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
-          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>
+        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200 shadow-xl"} border-2 rounded-lg flex flex-col h-full transition-all duration-200`}>
+          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-blue-200 bg-blue-100/50"}`}>
             <FiBox /> AI Assistant
           </h2>
           <div className="flex-grow p-4 overflow-y-auto space-y-4">
@@ -355,7 +355,7 @@ const CodeEditor: React.FC = () => {
               aiMessages.map((msg, index) => (
                 <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                   {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center font-bold text-white">A</div>}
-                  <div className={`max-w-xs md:max-w-md lg:max-w-sm rounded-lg px-4 py-2 ${msg.sender === 'user' ? (isDark ? 'bg-gray-700' : 'bg-gray-200') : (isDark ? 'bg-gray-800' : 'bg-gray-100')} ${msg.sender === 'user' ? (isDark ? 'text-gray-200' : 'text-gray-800') : (isDark ? 'text-gray-300' : 'text-gray-800')}`}>
+                  <div className={`max-w-xs md:max-w-md lg:max-w-sm rounded-2xl px-4 py-2.5 shadow-sm transition-all ${msg.sender === 'user' ? (isDark ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-blue-500 text-white rounded-tr-sm border border-blue-600') : (isDark ? 'bg-gray-800' : 'bg-white border border-gray-300')} ${msg.sender === 'user' ? (isDark ? 'text-white' : 'text-white') : (isDark ? 'text-gray-300' : 'text-gray-800')}`}>
                     {msg.sender === 'ai' ? (
                       <div className={`text-sm prose ${isDark ? "prose-invert" : ""} prose-sm max-w-none`}>
                         <ReactMarkdown
@@ -409,16 +409,16 @@ const CodeEditor: React.FC = () => {
             )}
             <div ref={aiChatEndRef} />
           </div>
-          <form onSubmit={handleAiSubmit} className={`p-3 border-t flex gap-2 ${isDark ? "border-gray-800" : "border-gray-300"}`}>
+          <form onSubmit={handleAiSubmit} className={`p-3 border-t flex gap-2 ${isDark ? "border-gray-800" : "border-blue-200 bg-blue-50/30"}`}>
             <input
               type="text"
               value={aiInput}
               onChange={(e) => setAiInput(e.target.value)}
               placeholder="Chat with the AI..."
-              className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-100 border-gray-300 text-gray-900"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+              className={`${isDark ? "bg-gray-800 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-blue-400"} border w-full p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition`}
               disabled={isAiLoading}
             />
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md disabled:opacity-50" disabled={isAiLoading || !aiInput.trim()}>
+            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95" disabled={isAiLoading || !aiInput.trim()}>
               <AiOutlineSend size={20} />
             </button>
           </form>
@@ -428,8 +428,8 @@ const CodeEditor: React.FC = () => {
 
     if (activePanel === "chat") {
       return (
-        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
-          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>
+        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200 shadow-xl"} border-2 rounded-lg flex flex-col h-full transition-all duration-200`}>
+          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-blue-200 bg-blue-100/50"}`}>
             <FiMessageCircle /> Room Chat
           </h2>
           <div className="flex-1">
@@ -442,7 +442,7 @@ const CodeEditor: React.FC = () => {
                 IP_ADDRESS={IP_ADDRESS}
               />
             ) : (
-              <div className={`flex-1 flex items-center justify-center text-sm px-4 ${isDark ? "text-gray-500" : "text-gray-600"}`}>
+              <div className={`flex-1 flex items-center justify-center text-sm px-4 ${isDark ? "text-gray-500" : "text-gray-600 bg-gray-50"}`}>
                 Chat is unavailable until the room is fully initialized.
               </div>
             )}
@@ -453,8 +453,8 @@ const CodeEditor: React.FC = () => {
 
     if (activePanel === "info") {
       return (
-        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
-          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>
+        <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200 shadow-xl"} border-2 rounded-lg flex flex-col h-full transition-all duration-200`}>
+          <h2 className={`text-xl font-bold p-3 border-b flex items-center gap-2 ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-blue-200 bg-blue-100/50"}`}>
             <FiUsers /> Members & Room
           </h2>
           <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
@@ -465,7 +465,7 @@ const CodeEditor: React.FC = () => {
               <div className="space-y-3">
                 {connectedUsers.length > 0 ? (
                   connectedUsers.map((u: any) => (
-                    <div key={u.id} className={`flex items-center gap-3 rounded-lg p-3 ${isDark ? "bg-gray-800" : "bg-gray-100"}`}>
+                    <div key={u.id} className={`flex items-center gap-3 rounded-lg p-3 border ${isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-300 shadow-sm"}`}>
                       <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-lg font-bold">
                         {u.name.charAt(0).toUpperCase()}
                       </div>
@@ -486,8 +486,8 @@ const CodeEditor: React.FC = () => {
               </h3>
               <p className={`text-xs mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>Share this room code with your teammates</p>
               <div className="flex items-center gap-2">
-                <p className={`text-green-600 font-mono ${isDark ? "bg-gray-800" : "bg-gray-100"} p-2 rounded select-all w-full truncate`}>{user.roomId || '...'}</p>
-                <button onClick={handleCopy} className={`${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"} text-white p-2 rounded-md`}>
+                <p className={`text-green-600 font-mono ${isDark ? "bg-gray-800" : "bg-white border border-gray-300"} p-2 rounded select-all w-full truncate`}>{user.roomId || '...'}</p>
+                <button onClick={handleCopy} className={`${isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-700"} p-2 rounded-md transition`}>
                   {isCopied ? <AiOutlineCheck /> : <AiOutlineCopy />}
                 </button>
               </div>
@@ -604,11 +604,11 @@ const CodeEditor: React.FC = () => {
 
     return (
       <div
-        className={`mt-3 ${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col`}
+        className={`mt-3 ${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200"} border-2 rounded-lg shadow-2xl flex flex-col transition-all duration-200`}
         style={{ height: isIoCollapsed ? 40 : ioPanelHeight }}
       >
         <div
-          className={`flex items-center justify-between px-4 py-2 border-b cursor-row-resize select-none ${isDark ? "border-gray-800" : "border-gray-300"}`}
+          className={`flex items-center justify-between px-4 py-2 border-b cursor-row-resize select-none ${isDark ? "border-gray-800" : "border-blue-200 bg-blue-100/50"}`}
           onMouseDown={startIoResizeDrag}
         >
           <div className="flex items-center gap-2">
@@ -632,7 +632,7 @@ const CodeEditor: React.FC = () => {
             </button>
             <button
               onClick={() => setIsIoCollapsed((v) => !v)}
-              className={`text-xs px-2 py-1 rounded-md ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
+              className={`text-xs px-2 py-1 rounded-md border transition ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700" : "bg-white hover:bg-blue-50 text-gray-800 border-gray-300"}`}
             >
               {isIoCollapsed ? "Show" : "Hide"}
             </button>
@@ -647,12 +647,12 @@ const CodeEditor: React.FC = () => {
                   value={activeSession.input}
                   onChange={handleInputChange}
                   placeholder="Enter input..."
-                  className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-50 border-gray-300 text-gray-900"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs flex-1 resize-none`}
+                  className={`${isDark ? "bg-gray-800 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-blue-400"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs flex-1 resize-none transition`}
                 />
               </div>
               <div className="w-1/2 flex flex-col h-full">
                 <p className={`text-xs mb-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>Output</p>
-                <div className={`${isDark ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-300"} border text-green-600 p-2 rounded-md overflow-y-auto font-mono text-xs flex-1`}>
+                <div className={`${isDark ? "bg-gray-800 border-gray-700" : "bg-gray-100 border-gray-300"} border text-green-600 p-2 rounded-md overflow-y-auto font-mono text-xs flex-1 transition`}>
                   {activeSession.output.length > 0 ? (
                     activeSession.output.map((line, index) => (
                       <pre key={index} className="whitespace-pre-wrap">
@@ -672,13 +672,13 @@ const CodeEditor: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen font-sans ${isDark ? "bg-black text-gray-300" : "bg-white text-gray-900"} flex h-screen overflow-hidden`}>      <Sidebar
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${isDark ? "bg-black text-gray-300" : "bg-gradient-to-br from-gray-50 to-blue-50 text-gray-900"} flex h-screen overflow-hidden`}>      <Sidebar
       showRooms
       onOpenAccount={() => setIsAccountOpen(true)}
       onOpenSettings={() => setIsSettingsOpen(true)}
     />
       <div className={`flex flex-col h-full flex-1 w-full gap-4 p-4 overflow-y-auto`}> 
-        <nav className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-xl px-4 py-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between`}>
+        <nav className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50/80 backdrop-blur-sm border-blue-200 shadow-lg"} border rounded-xl px-4 py-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between transition-all duration-200`}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen((v) => !v)}
@@ -687,24 +687,24 @@ const CodeEditor: React.FC = () => {
               {isSidebarOpen ? <FiChevronsLeft size={18} /> : <FiChevronsRight size={18} />}
             </button>
             <span className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>CoLearn Live</span>
-            <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "text-gray-500 bg-gray-800" : "text-gray-600 bg-gray-100"}`}>Room {user.roomId || "..."}</span>
+            <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "text-gray-500 bg-gray-800" : "text-blue-700 bg-blue-100 border border-blue-200"}`}>Room {user.roomId || "..."}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handlePanelToggle("ai")}
-              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition ${activePanel === 'ai' ? 'bg-blue-600 text-white' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activePanel === 'ai' ? 'bg-blue-600 text-white shadow-md' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300')} hover:scale-105 active:scale-95`}
             >
               <FiBox /> AI Tutor
             </button>
             <button
               onClick={() => handlePanelToggle("chat")}
-              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition ${activePanel === 'chat' ? 'bg-blue-600 text-white' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activePanel === 'chat' ? 'bg-blue-600 text-white shadow-md' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')} hover:scale-105 active:scale-95`}
             >
               <FiMessageCircle /> Chat
             </button>
             <button
               onClick={() => handlePanelToggle("info")}
-              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition ${activePanel === 'info' ? 'bg-blue-600 text-white' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}`}
+              className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activePanel === 'info' ? 'bg-blue-600 text-white shadow-md' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')} hover:scale-105 active:scale-95`}
             >
               <FiUsers /> Members & Room
             </button>
@@ -713,7 +713,7 @@ const CodeEditor: React.FC = () => {
             <select
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
-              className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-100 border-gray-300 text-gray-900"} border px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-300 text-gray-900 shadow-sm hover:border-blue-400"} border px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200`}
             >
               <option value="javascript">JavaScript</option>
               <option value="python">Python</option>
@@ -724,7 +724,7 @@ const CodeEditor: React.FC = () => {
             </select>
             <button
               onClick={handleSubmit}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105'}`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-lg transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105 active:scale-95'} duration-200`}
               disabled={isLoading}
             >
               {isLoading && <AiOutlineLoading3Quarters className="animate-spin" />}
@@ -732,7 +732,7 @@ const CodeEditor: React.FC = () => {
             </button>
             <button
               onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm transition-all duration-200 hover:scale-105 active:scale-95 shadow-md"
             >
               Logout
             </button>
@@ -741,11 +741,11 @@ const CodeEditor: React.FC = () => {
 
         <div className="flex flex-1 gap-4 overflow-hidden flex-col lg:flex-row">
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 border border-gray-800 rounded-lg overflow-hidden shadow-2xl">
+            <div className={`flex-1 border ${isDark ? "border-gray-800" : "border-gray-300 bg-gray-50"} rounded-lg overflow-hidden shadow-2xl transition-all duration-200`}>
               <MonacoEditor
                 value={code}
                 language={language}
-                theme="vs-dark"
+                theme={isDark ? "vs-dark" : "vs"}
                 onMount={handleEditorDidMount}
                 onChange={(value) => setCode(value)}
                 options={{ minimap: { enabled: false }, fontSize: 14 }}
