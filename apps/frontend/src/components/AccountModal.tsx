@@ -32,7 +32,7 @@ const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className={`fixed inset-0 z-50 ${isDark ? "bg-black/50" : "bg-gray-900/50"} flex items-center justify-center p-4`}>
-      <div className={`${isDark ? "bg-gray-900 border-gray-700" : "bg-white border-gray-300"} border rounded-xl shadow-2xl w-full max-w-sm p-6`}>
+      <div className={`${isDark ? "bg-gray-900 border-gray-700" : "bg-blue-50 border-blue-200 shadow-xl"} border-2 rounded-xl shadow-2xl w-full max-w-sm p-6 transition-all duration-200`}>
         <div className="flex items-center justify-between mb-4">
           <h2 className={`text-lg font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Account</h2>
           <button

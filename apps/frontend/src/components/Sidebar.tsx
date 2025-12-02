@@ -108,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-64 ${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border-r p-4 flex flex-col transform transition-transform 
+        className={`fixed inset-y-0 left-0 z-30 w-64 ${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50/95 backdrop-blur-sm border-blue-200 shadow-xl"} border-r-2 p-4 flex flex-col transform transition-all duration-200
   ${isOpen
             ? "translate-x-0 lg:translate-x-0 lg:static" // Open: Static position (takes up space)
             : "-translate-x-full lg:hidden"              // Closed: Hidden on desktop (removes space)
@@ -144,7 +144,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     return (
                       <div
                         key={room.roomId}
-                        className={`relative group w-full text-left px-3 py-2 rounded-lg text-sm ${isDark ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200"} border`}
+                        className={`relative group w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isDark ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-white border-gray-300 text-gray-800 hover:bg-blue-100 shadow-sm"} border hover:scale-[1.02] active:scale-[0.98]`}
                       >
                         <button
                           onClick={(e) => handleRoomClick(room.roomId, e)}
@@ -181,15 +181,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        <div className={`mt-auto pt-4 ${isDark ? "border-gray-700" : "border-gray-300"} border-t flex flex-col gap-2`}>
+        <div className={`mt-auto pt-4 ${isDark ? "border-gray-700" : "border-blue-200"} border-t-2 flex flex-col gap-2`}>
           <button
-            className={`w-full px-3 py-2 rounded-lg ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-800"} text-sm text-left`}
+            className={`w-full px-3 py-2 rounded-lg transition-all duration-200 border ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700" : "bg-white hover:bg-blue-100 text-gray-800 border-gray-300 shadow-sm"} text-sm text-left hover:scale-[1.02] active:scale-[0.98]`}
             onClick={onOpenSettings}
           >
             Settings
           </button>
           <button
-            className={`w-full px-3 py-2 rounded-lg ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-800"} text-sm text-left`}
+            className={`w-full px-3 py-2 rounded-lg transition-all duration-200 border ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700" : "bg-white hover:bg-blue-100 text-gray-800 border-gray-300 shadow-sm"} text-sm text-left hover:scale-[1.02] active:scale-[0.98]`}
             onClick={onOpenAccount}
           >
             Account

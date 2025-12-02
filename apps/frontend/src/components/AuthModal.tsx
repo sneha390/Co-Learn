@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { AiOutlineClose, AiOutlineMail, AiOutlineLock, AiOutlineUser } from "react-icons/ai";
+import { useRecoilValue } from "recoil";
+import { themeAtom } from "../atoms/themeAtom";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,6 +17,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const theme = useRecoilValue(themeAtom);
+  const isDark = theme === "dark";
 
   const resetForm = () => {
     setName("");
@@ -71,22 +75,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-md relative">
+    <div className={`fixed inset-0 ${isDark ? "bg-black/50" : "bg-gray-900/50"} flex items-center justify-center z-50 p-4`}>
+      <div className={`${isDark ? "bg-gray-800 border-gray-700" : "bg-blue-50 border-blue-200"} rounded-xl shadow-2xl w-full max-w-md relative border-2`}>
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          className={`absolute top-4 right-4 ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"} transition-colors`}
         >
           <AiOutlineClose size={24} />
         </button>
 
         {/* Header */}
-        <div className="p-6 border-b border-gray-700">
-          <h2 className="text-2xl font-bold text-white">
+        <div className={`p-6 border-b ${isDark ? "border-gray-700" : "border-blue-200 bg-blue-100/50"}`}>
+          <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
             {isSignUp ? "Create Account" : "Sign In"}
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className={`${isDark ? "text-gray-400" : "text-gray-600"} text-sm mt-1`}>
             {isSignUp
               ? "Join CoLearn to start coding together"
               : "Welcome back! Sign in to continue"}
@@ -97,46 +101,46 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className={`block text-sm font-medium ${isDark ? "text-gray-300" : "text-gray-700"} mb-2`}>
                 Name
               </label>
               <div className="relative">
-                <AiOutlineUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <AiOutlineUser className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`} size={20} />
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your name"
                   required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full pl-10 pr-4 py-2 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-blue-400"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition`}
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className={`block text-sm font-medium ${isDark ? "text-gray-300" : "text-gray-700"} mb-2`}>
               Email
             </label>
             <div className="relative">
-              <AiOutlineMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <AiOutlineMail className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`} size={20} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full pl-10 pr-4 py-2 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className={`block text-sm font-medium ${isDark ? "text-gray-300" : "text-gray-700"} mb-2`}>
               Password
             </label>
             <div className="relative">
-              <AiOutlineLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <AiOutlineLock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDark ? "text-gray-400" : "text-gray-500"}`} size={20} />
               <input
                 type="password"
                 value={password}
@@ -144,13 +148,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
                 placeholder={isSignUp ? "At least 6 characters" : "Enter your password"}
                 required
                 minLength={isSignUp ? 6 : undefined}
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full pl-10 pr-4 py-2 ${isDark ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
               />
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm">
+            <div className={`${isDark ? "bg-red-900/50 border-red-700 text-red-200" : "bg-red-50 border-red-200 text-red-700"} border px-4 py-3 rounded-lg text-sm`}>
               {error}
             </div>
           )}
@@ -158,19 +162,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
           >
             {loading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
           </button>
 
-          <div className="text-center text-sm text-gray-400">
+          <div className={`text-center text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
             {isSignUp ? (
               <>
                 Already have an account?{" "}
                 <button
                   type="button"
                   onClick={switchMode}
-                  className="text-blue-400 hover:text-blue-300 font-medium"
+                  className={`${isDark ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"} font-medium transition-colors`}
                 >
                   Sign In
                 </button>
@@ -181,7 +185,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, IP_AD
                 <button
                   type="button"
                   onClick={switchMode}
-                  className="text-blue-400 hover:text-blue-300 font-medium"
+                  className={`${isDark ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"} font-medium transition-colors`}
                 >
                   Sign Up
                 </button>

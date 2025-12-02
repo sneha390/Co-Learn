@@ -104,68 +104,68 @@ const Chat: React.FC<ChatProps> = ({ socket, chatId, userId, userName: _userName
   };
 
   return (
-    <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
-      <h2 className={`text-xl font-bold p-3 border-b ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>Chat</h2>
-      <div className="flex-grow p-4 overflow-y-auto space-y-3">
+    <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-blue-50 border-blue-200"} border-2 rounded-lg shadow-2xl flex flex-col h-full`}>
+      <h2 className={`text-xl font-bold p-4 border-b ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-blue-200 bg-blue-100/50"}`}>Chat</h2>
+      <div className="flex-grow p-4 overflow-y-auto space-y-3 scroll-smooth">
         {messages.length > 0 ? (
           messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex items-start gap-3 ${
-                msg.userId === userId ? "justify-end" : ""
+              className={`flex items-start gap-3 animate-fade-in ${
+                msg.userId === userId ? "justify-end flex-row-reverse" : ""
               }`}
             >
-              {msg.userId !== userId && (
-                <div className="w-8 h-8 rounded-full bg-green-500 flex-shrink-0 flex items-center justify-center font-bold text-white text-sm">
-                  {msg.userName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div
-                className={`max-w-xs md:max-w-md lg:max-w-sm rounded-lg px-4 py-2 ${
-                  msg.userId === userId
-                    ? "bg-blue-600 text-white"
-                    : isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-800"
-                }`}
-              >
+              <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-sm shadow-md ${
+                msg.userId === userId ? "bg-blue-500" : "bg-green-500"
+              }`}>
+                {msg.userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex flex-col max-w-xs md:max-w-md lg:max-w-sm">
                 {msg.userId !== userId && (
-                  <p className="text-xs font-semibold mb-1 opacity-80">
+                  <p className={`text-xs font-semibold mb-1 px-1 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
                     {msg.userName}
                   </p>
                 )}
-                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                <p className="text-xs opacity-60 mt-1">
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-              {msg.userId === userId && (
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center font-bold text-white text-sm">
-                  {msg.userName.charAt(0).toUpperCase()}
+                <div
+                  className={`rounded-2xl px-4 py-2.5 shadow-sm transition-all border ${
+                    msg.userId === userId
+                      ? "bg-blue-600 text-white rounded-tr-sm border-blue-700"
+                      : isDark ? "bg-gray-800 text-gray-300 rounded-tl-sm border-gray-700" : "bg-white text-gray-800 rounded-tl-sm border-gray-300"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                  <p className={`text-xs mt-1.5 ${msg.userId === userId ? "text-blue-100" : isDark ? "text-gray-500" : "text-gray-500"}`}>
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           ))
         ) : (
-          <p className={`text-center mt-4 ${isDark ? "text-gray-500" : "text-gray-600"}`}>
-            No messages yet. Start chatting!
-          </p>
+          <div className={`flex flex-col items-center justify-center h-full ${isDark ? "text-gray-500" : "text-gray-400 bg-gray-50"}`}>
+            <svg className="w-16 h-16 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p className="text-center">No messages yet. Start chatting!</p>
+          </div>
         )}
         <div ref={chatEndRef} />
       </div>
-      <form onSubmit={handleSendMessage} className={`p-3 border-t flex gap-2 ${isDark ? "border-gray-800" : "border-gray-300"}`}>
+      <form onSubmit={handleSendMessage} className={`p-3 border-t flex gap-2 ${isDark ? "border-gray-800" : "border-blue-200 bg-blue-50/30"}`}>
         <input
           type="text"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder="Type a message..."
-          className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-100 border-gray-300 text-gray-900"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
+          className={`${isDark ? "bg-gray-800 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 hover:border-blue-400"} border w-full p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition`}
           disabled={!socket || socket.readyState !== WebSocket.OPEN}
         />
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
           disabled={
             !inputMessage.trim() ||
             !socket ||
