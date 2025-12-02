@@ -354,7 +354,13 @@ app.get("/rooms/my", authenticateToken, async (req: AuthRequest, res) => {
 
   try {
     const rooms = await Room.find({ members: req.user.userId }).sort({ createdAt: -1 });
-    res.status(200).json({ rooms });
+    // Include ownerId in response
+    const roomsWithOwner = rooms.map(room => ({
+      roomId: room.roomId,
+      ownerId: room.ownerId,
+      members: room.members,
+    }));
+    res.status(200).json({ rooms: roomsWithOwner });
   } catch (error) {
     console.error("Error fetching user rooms:", error);
     res.status(500).json({ error: "Failed to fetch rooms" });
@@ -374,6 +380,41 @@ app.get("/room/:roomId", async (req, res) => {
   } catch (error) {
     console.error("Error fetching room:", error);
     res.status(500).json({ error: "Failed to fetch room" });
+  }
+});
+
+// Delete a room (only owner can delete)
+app.delete("/room/:roomId", authenticateToken, async (req: AuthRequest, res) => {
+  const { roomId } = req.params;
+
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const room = await Room.findOne({ roomId });
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+
+    // Check if user is the owner
+    if (room.ownerId !== req.user.userId) {
+      return res.status(403).json({ error: "Only the room owner can delete the room" });
+    }
+
+    // Delete associated entities
+    await Code.deleteOne({ codeId: room.codeId });
+    await Notes.deleteOne({ notesId: room.notesId });
+    await ChatMessage.deleteMany({ chatId: room.chatId });
+    await AiMessage.deleteMany({ roomId: room.roomId });
+
+    // Delete the room
+    await Room.deleteOne({ roomId });
+
+    res.status(200).json({ message: "Room deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    res.status(500).json({ error: "Failed to delete room" });
   }
 });
 

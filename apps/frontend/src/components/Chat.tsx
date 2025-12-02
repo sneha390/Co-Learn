@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AiOutlineSend } from "react-icons/ai";
+import { useRecoilValue } from "recoil";
+import { themeAtom } from "../atoms/themeAtom";
 
 interface ChatMessage {
   userId: string;
@@ -20,6 +22,8 @@ const Chat: React.FC<ChatProps> = ({ socket, chatId, userId, userName: _userName
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const theme = useRecoilValue(themeAtom);
+  const isDark = theme === "dark";
 
   // Load chat history from backend
   useEffect(() => {
@@ -100,8 +104,8 @@ const Chat: React.FC<ChatProps> = ({ socket, chatId, userId, userName: _userName
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-2xl flex flex-col h-full">
-      <h2 className="text-xl font-bold text-gray-300 p-3 border-b border-gray-800">Chat</h2>
+    <div className={`${isDark ? "bg-gray-900 border-gray-800" : "bg-white border-gray-300"} border rounded-lg shadow-2xl flex flex-col h-full`}>
+      <h2 className={`text-xl font-bold p-3 border-b ${isDark ? "text-gray-300 border-gray-800" : "text-gray-900 border-gray-300"}`}>Chat</h2>
       <div className="flex-grow p-4 overflow-y-auto space-y-3">
         {messages.length > 0 ? (
           messages.map((msg, index) => (
@@ -120,7 +124,7 @@ const Chat: React.FC<ChatProps> = ({ socket, chatId, userId, userName: _userName
                 className={`max-w-xs md:max-w-md lg:max-w-sm rounded-lg px-4 py-2 ${
                   msg.userId === userId
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-300"
+                    : isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-800"
                 }`}
               >
                 {msg.userId !== userId && (
@@ -144,19 +148,19 @@ const Chat: React.FC<ChatProps> = ({ socket, chatId, userId, userName: _userName
             </div>
           ))
         ) : (
-          <p className="text-gray-500 text-center mt-4">
+          <p className={`text-center mt-4 ${isDark ? "text-gray-500" : "text-gray-600"}`}>
             No messages yet. Start chatting!
           </p>
         )}
         <div ref={chatEndRef} />
       </div>
-      <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-800 flex gap-2">
+      <form onSubmit={handleSendMessage} className={`p-3 border-t flex gap-2 ${isDark ? "border-gray-800" : "border-gray-300"}`}>
         <input
           type="text"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder="Type a message..."
-          className="bg-gray-800 border border-gray-700 text-white w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          className={`${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-100 border-gray-300 text-gray-900"} border w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
           disabled={!socket || socket.readyState !== WebSocket.OPEN}
         />
         <button
