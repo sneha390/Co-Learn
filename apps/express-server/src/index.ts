@@ -322,6 +322,21 @@ app.post("/room/join", authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// Get all rooms for the authenticated user
+app.get("/rooms/my", authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const rooms = await Room.find({ members: req.user.userId }).sort({ createdAt: -1 });
+    res.status(200).json({ rooms });
+  } catch (error) {
+    console.error("Error fetching user rooms:", error);
+    res.status(500).json({ error: "Failed to fetch rooms" });
+  }
+});
+
 app.get("/room/:roomId", async (req, res) => {
   const { roomId } = req.params;
 
