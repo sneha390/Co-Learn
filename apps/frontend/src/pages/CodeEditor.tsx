@@ -66,7 +66,7 @@ const CodeEditor: React.FC = () => {
   // multiplayer state
   const [connectedUsers, setConnectedUsers] = useRecoilState<any[]>(connectedUsersAtom);
   const params = useParams();
-  
+
   // Chat state
   const [chatId, setChatId] = useState<string>("");
 
@@ -461,7 +461,7 @@ const CodeEditor: React.FC = () => {
     } finally {
       setIsAiLoading(false);
     }
-};
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(user.roomId);
@@ -593,13 +593,12 @@ const CodeEditor: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen font-sans ${isDark ? "bg-black text-gray-300" : "bg-white text-gray-900"}`}>
-      <Sidebar
-        showRooms
-        onOpenAccount={() => setIsAccountOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
-      <div className={`flex flex-col h-[calc(100vh-2rem)] gap-4 p-4 ${isSidebarOpen ? "lg:ml-64" : ""}`}>
+    <div className={`min-h-screen font-sans ${isDark ? "bg-black text-gray-300" : "bg-white text-gray-900"} flex h-screen overflow-hidden`}>      <Sidebar
+      showRooms
+      onOpenAccount={() => setIsAccountOpen(true)}
+      onOpenSettings={() => setIsSettingsOpen(true)}
+    />
+      <div className={`flex flex-col h-full flex-1 w-full gap-4 p-4 overflow-y-auto`}> 
         <nav className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <button
