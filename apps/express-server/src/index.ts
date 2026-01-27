@@ -1,3 +1,8 @@
+import { config } from "dotenv";
+import path from "path";
+
+// Load .env from project root
+config({ path: path.resolve(__dirname, "../../../.env") });
 import express from "express";
 import { createClient } from "redis";
 import cors from "cors";

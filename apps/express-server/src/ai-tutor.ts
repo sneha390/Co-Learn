@@ -1,8 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-import "dotenv/config"; // To load environment variables
-
-// Initialize the GoogleGenAI client with the API key from environment variables
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
  * Defines the structure for the data sent to the AI service.
@@ -56,20 +52,14 @@ export async function getAiTutorResponse(data: AiTutorData): Promise<string> {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY is not configured in environment variables.");
     }
-
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
     const userQuery = constructUserQuery(data);
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash", // Use a stable model name
-            contents: [{ role: "user", parts: [{ text: userQuery }] }],
-            config: {
-                systemInstruction: systemPrompt
-            }
-        });
-
-        // Extract the response text
-        const aiResponseText = response.text;
+        const result = await model.generateContent(userQuery);
+        const response = await result.response;
+        const aiResponseText = response.text();
         
         if (!aiResponseText) {
             console.error("AI response was empty:", response);
@@ -80,6 +70,6 @@ export async function getAiTutorResponse(data: AiTutorData): Promise<string> {
 
     } catch (error) {
         console.error("Error in getAiTutorResponse:", error);
-        throw new Error("Failed to communicate with the Gemini API.");
+        return "Sorry, the AI tutor is temporarily unavailable. Please try again later.";
     }
 }
