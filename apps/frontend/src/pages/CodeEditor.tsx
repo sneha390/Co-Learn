@@ -38,7 +38,7 @@ const CodeEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false); // Loading state for code submission
   const [currentButtonState, setCurrentButtonState] = useState("Run Code");
   const [user, setUser] = useRecoilState(userAtom);
-  const [, setAuth] = useRecoilState(authAtom);
+  const [auth, setAuth] = useRecoilState(authAtom);
   const navigate = useNavigate();
   const [isCopied, setIsCopied] = useState(false);
   const theme = useRecoilValue(themeAtom);
@@ -149,10 +149,50 @@ const CodeEditor: React.FC = () => {
   useEffect(() => {
     const effectiveRoomId = user.roomId || params.roomId;
     
-    // If no socket and we have a roomId in URL, redirect to Register to join
-    if (!socket && effectiveRoomId) {
-      navigate("/" + effectiveRoomId);
-      return;
+    // If no socket but we have a roomId in URL, create a socket here.
+    // This prevents "Back to editor" from bouncing to the landing page.
+    if ((!socket || socket.readyState === WebSocket.CLOSED) && effectiveRoomId) {
+      const authUser = auth.user || (() => {
+        try {
+          const stored = localStorage.getItem("user");
+          return stored ? JSON.parse(stored) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      const userIdForWs = user.id || authUser?.id;
+      const userNameForWs = user.name || authUser?.name || "User";
+
+      if (userIdForWs) {
+        // Ensure user atom has the roomId so downstream code uses it consistently
+        if (!user.roomId && params.roomId) {
+          setUser((prev) => ({ ...prev, roomId: params.roomId as string }));
+        }
+
+        const ws = new WebSocket(
+          `ws://${IP_ADDRESS}:5000?roomId=${effectiveRoomId}&id=${userIdForWs}&name=${encodeURIComponent(
+            userNameForWs
+          )}`
+        );
+        
+        ws.onopen = () => {
+          // Once connected, request initial data
+          if (user.id) {
+            ws.send(JSON.stringify({ type: "requestToGetUsers", userId: user.id }));
+            ws.send(JSON.stringify({ type: "requestForAllData" }));
+          }
+        };
+        
+        ws.onclose = () => {
+          console.log("Connection closed");
+          setUser({ id: "", name: "", roomId: "" });
+          setSocket(null);
+        };
+        
+        setSocket(ws);
+        return;
+      }
     }
     
     // If we have a socket but user.roomId doesn't match params.roomId, we need to reconnect
@@ -162,13 +202,15 @@ const CodeEditor: React.FC = () => {
         socket.close();
       }
       setSocket(null);
-      navigate("/" + params.roomId);
       return;
     }
     
-    if (socket) {
-      socket.send(JSON.stringify({ type: "requestToGetUsers", userId: user.id }));
-      socket.send(JSON.stringify({ type: "requestForAllData" }));
+    // Only send messages if socket is OPEN (not CONNECTING or CLOSED)
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      if (user.id) {
+        socket.send(JSON.stringify({ type: "requestToGetUsers", userId: user.id }));
+        socket.send(JSON.stringify({ type: "requestForAllData" }));
+      }
       socket.onclose = () => {
         console.log("Connection closed");
         setUser({ id: "", name: "", roomId: "" });
@@ -181,7 +223,7 @@ const CodeEditor: React.FC = () => {
         socket.close();
       }
     };
-  }, [socket, params.roomId, user.roomId]);
+  }, [socket, params.roomId, user.roomId, user.id, auth.user, setSocket, setUser]);
 
 
   useEffect(() => {

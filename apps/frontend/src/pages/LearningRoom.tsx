@@ -102,17 +102,14 @@ const LearningRoom: React.FC = () => {
   const [code, setCode] = useState<string>("# Python\n# Loading checkpoint...\n");
   const [language, setLanguage] = useState<string>("python");
   const [isAdvancing, setIsAdvancing] = useState(false);
-  const [isSubmittingExplanation, setIsSubmittingExplanation] =
-    useState(false);
   const [explanation, setExplanation] = useState("");
   const [reflection, setReflection] = useState("");
+  const [navError, setNavError] = useState<string | null>(null);
 
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
   const [aiInput, setAiInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const aiChatEndRef = useRef<HTMLDivElement>(null);
-
-  const [activeTypistId, setActiveTypistId] = useState<string | null>(null);
 
   const [chatReady, setChatReady] = useState(false);
 
@@ -128,16 +125,7 @@ const LearningRoom: React.FC = () => {
       (cp) => cp.checkpointId === currentCheckpoint?.checkpointId
     ) || null;
 
-  // Normalize IDs to string so we don't miss a match due to type (e.g. string vs number)
-  const isCurrentUserActiveTypist =
-    activeTypistId != null &&
-    user.id != null &&
-    String(activeTypistId).trim() === String(user.id).trim();
-
-  const canEditCode =
-    !!currentCheckpoint &&
-    !currentCheckpoint.readOnlyCode &&
-    isCurrentUserActiveTypist;
+  const canEditCode = !!currentCheckpoint && !currentCheckpoint.readOnlyCode;
 
   const roomLabel = roomIdFromUrl || "...";
 
@@ -218,7 +206,7 @@ const LearningRoom: React.FC = () => {
   }, [currentCheckpoint?.checkpointId]);
 
   // Ensure there is a WebSocket connection for this room and
-  // wire up basic listeners for users / active typist.
+  // wire up basic listeners for users / code sync.
   useEffect(() => {
     const effectiveRoomId = roomIdFromUrl;
     if (!effectiveRoomId) return;
@@ -248,15 +236,9 @@ const LearningRoom: React.FC = () => {
       const data = JSON.parse(event.data);
       if (data.type === "users") {
         setConnectedUsers(data.users || []);
-        if (data.activeTypistId !== undefined) {
-          setActiveTypistId(data.activeTypistId || null);
-        }
       }
       if (data.type === "code") setCode(data.code);
       // In learning room we never override language from WebSocket—it comes from the module (Python).
-      if (data.type === "activeTypist") {
-        setActiveTypistId(data.activeTypistId ?? null);
-      }
     };
 
     socket.addEventListener("message", handleMessage);
@@ -289,7 +271,6 @@ const LearningRoom: React.FC = () => {
     editor.onDidChangeModelContent(() => {
       const currentCode = editor.getValue();
       if (currentCode !== code && socket?.readyState === WebSocket.OPEN) {
-        if (!canEditCode) return;
         socket.send(
           JSON.stringify({
             type: "code",
@@ -299,16 +280,6 @@ const LearningRoom: React.FC = () => {
         );
       }
     });
-  };
-
-  const handleRequestTypingControl = () => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: "requestTypingControl" }));
-  };
-
-  const handleReleaseTypingControl = () => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: "releaseTypingControl" }));
   };
 
   const handleAiSubmit = async (e: React.FormEvent) => {
@@ -362,52 +333,14 @@ const LearningRoom: React.FC = () => {
     }
   };
 
-  const canSubmitExplanation =
-    isExplainCheckpoint && explanation.trim().length > 0;
-
-  const handleSubmitExplanation = async () => {
-    if (!roomIdFromUrl || !currentCheckpoint || !canSubmitExplanation) return;
-    setIsSubmittingExplanation(true);
-    try {
-      const res = await fetch(
-        `http://${IP_ADDRESS}:3000/learning/room/${roomIdFromUrl}/checkpoints/${currentCheckpoint.checkpointId}/explain`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
-          },
-          body: JSON.stringify({ explanation }),
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        // Show AI feedback in the AI Guide tab as an AI message
-        if (data.feedback) {
-          setAiMessages((prev) => [
-            ...prev,
-            { sender: "ai", text: data.feedback },
-          ]);
-        }
-        if (data.progress) {
-          setProgress({
-            currentCheckpointIndex:
-              data.progress.currentCheckpointIndex ??
-              (progress?.currentCheckpointIndex || 0),
-            checkpoints: data.progress.checkpoints || [],
-          });
-        }
-      }
-    } catch (e) {
-      console.error("Failed to submit explanation", e);
-    } finally {
-      setIsSubmittingExplanation(false);
-    }
-  };
+  // NOTE (iteration choice): We are not using AI evaluation to unlock checkpoints.
+  // Users can write explanations/reflections locally and manually move forward
+  // using "Mark complete" + "Next".
 
   const handleAdvanceCheckpoint = async () => {
     if (!roomIdFromUrl) return;
     setIsAdvancing(true);
+    setNavError(null);
     try {
       const res = await fetch(
         `http://${IP_ADDRESS}:3000/learning/room/${roomIdFromUrl}/next`,
@@ -418,14 +351,61 @@ const LearningRoom: React.FC = () => {
           },
         }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.room?.currentCheckpointIndex != null) {
-        setCurrentCheckpointIndex(data.room.currentCheckpointIndex);
+        const nextIndex = data.room.currentCheckpointIndex;
+        setCurrentCheckpointIndex(nextIndex);
+        // If the backend returns the same index, surface it so it doesn't feel broken.
+        if (nextIndex === currentCheckpointIndex && module) {
+          setNavError(
+            `Already at the last checkpoint (${currentCheckpointIndex + 1}/${module.checkpoints.length}).`
+          );
+        }
+      } else if (!res.ok && data?.error) {
+        setNavError(data.error || "Cannot advance checkpoint.");
+        console.warn("Cannot advance checkpoint:", data);
+      } else if (!res.ok) {
+        setNavError("Cannot advance checkpoint.");
       }
     } catch (e) {
       console.error("Failed to advance checkpoint", e);
+      setNavError("Failed to advance checkpoint.");
     } finally {
       setIsAdvancing(false);
+    }
+  };
+
+  const [isCompletingCheckpoint, setIsCompletingCheckpoint] = useState(false);
+
+  const handleCompleteCheckpoint = async () => {
+    if (!roomIdFromUrl || !currentCheckpoint || !auth.token) return;
+    setIsCompletingCheckpoint(true);
+    try {
+      const res = await fetch(
+        `http://${IP_ADDRESS}:3000/learning/room/${roomIdFromUrl}/checkpoints/${currentCheckpoint.checkpointId}/complete`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.warn("Failed to complete checkpoint:", data);
+        return;
+      }
+      if (data.progress) {
+        setProgress({
+          currentCheckpointIndex:
+            data.progress.currentCheckpointIndex ?? (progress?.currentCheckpointIndex || 0),
+          checkpoints: data.progress.checkpoints || [],
+        });
+      }
+    } catch (e) {
+      console.error("Failed to complete checkpoint", e);
+    } finally {
+      setIsCompletingCheckpoint(false);
     }
   };
 
@@ -570,6 +550,11 @@ const LearningRoom: React.FC = () => {
           >
             {currentCheckpoint.title}
           </h2>
+          {module && (
+            <p className={`text-xs mb-2 ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+              Checkpoint {currentCheckpointIndex + 1} of {module.checkpoints.length}
+            </p>
+          )}
           <div
             className={`prose prose-sm max-w-none ${
               isDark ? "prose-invert text-gray-200" : "text-gray-800"
@@ -580,6 +565,18 @@ const LearningRoom: React.FC = () => {
             </ReactMarkdown>
           </div>
         </div>
+
+        {navError && (
+          <div
+            className={`rounded-lg border px-4 py-2 text-sm ${
+              isDark
+                ? "bg-red-900/30 border-red-900 text-red-200"
+                : "bg-red-50 border-red-200 text-red-700"
+            }`}
+          >
+            {navError}
+          </div>
+        )}
 
         <div
           className={`flex-1 rounded-lg border overflow-hidden ${
@@ -613,7 +610,7 @@ const LearningRoom: React.FC = () => {
                 isDark ? "text-gray-200" : "text-gray-800"
               }`}
             >
-              Explain-to-unlock
+              Explanation
             </p>
             <textarea
               value={explanation}
@@ -626,18 +623,9 @@ const LearningRoom: React.FC = () => {
               }`}
               rows={4}
             />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={handleSubmitExplanation}
-                disabled={!canSubmitExplanation || isSubmittingExplanation}
-                className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50 flex items-center gap-2"
-              >
-                {isSubmittingExplanation && (
-                  <AiOutlineLoading3Quarters className="animate-spin" />
-                )}
-                Submit explanation
-              </button>
-            </div>
+            <p className={`text-xs ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+              Use <strong>Mark complete</strong> when you’re satisfied, then click <strong>Next</strong>.
+            </p>
           </div>
         )}
 
@@ -669,34 +657,19 @@ const LearningRoom: React.FC = () => {
         )}
 
         <div className="flex justify-between items-center mt-1">
-          <div className="flex items-center gap-2 text-xs">
-            <span
-              className={
-                isDark ? "text-gray-400" : "text-gray-600"
-              }
-            >
-              Active typist:{" "}
-              {activeTypistId
-                ? connectedUsers.find((u) => u.id === activeTypistId)
-                    ?.name || activeTypistId
-                : "none"}
-            </span>
-            <button
-              onClick={handleRequestTypingControl}
-              className="px-2 py-1 rounded-md border text-xs bg-blue-600 text-white"
-            >
-              Request control
-            </button>
-            {isCurrentUserActiveTypist && (
-              <button
-                onClick={handleReleaseTypingControl}
-                className="px-2 py-1 rounded-md border text-xs bg-gray-700 text-white"
-              >
-                Release
-              </button>
-            )}
-          </div>
+          <div />
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleCompleteCheckpoint}
+              disabled={isCompletingCheckpoint}
+              className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50 flex items-center gap-2"
+              title="Mark this checkpoint as completed"
+            >
+              {isCompletingCheckpoint && (
+                <AiOutlineLoading3Quarters className="animate-spin" />
+              )}
+              Mark complete
+            </button>
             <button
               onClick={handlePreviousCheckpoint}
               disabled={isPrevDisabled}
@@ -792,11 +765,6 @@ const LearningRoom: React.FC = () => {
                     >
                       {u.name}
                     </p>
-                    {u.id === activeTypistId && (
-                      <p className="text-[10px] text-green-400">
-                        Active typist
-                      </p>
-                    )}
                   </div>
                 </div>
               ))

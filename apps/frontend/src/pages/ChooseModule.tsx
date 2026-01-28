@@ -99,8 +99,15 @@ const ChooseModule: React.FC = () => {
   };
 
   const handleBackToEditor = () => {
-    if (roomIdFromUrl) navigate(`/code/${roomIdFromUrl}`);
-    else navigate("/");
+    // Always go to the editor route for this room. The editor page will
+    // handle joining/initialization if needed.
+    if (roomIdFromUrl) {
+      navigate(`/code/${roomIdFromUrl}`);
+      return;
+    }
+
+    // Fallback: if for some reason we don't have a roomId, go home.
+    navigate("/");
   };
 
   return (

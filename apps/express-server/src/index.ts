@@ -444,7 +444,7 @@ for i in range(0, 6):
     print(i)
 `,
       readOnlyCode: false,
-      requirePeerReview: true,
+      requirePeerReview: false,
       aiMode: "hint",
     },
     {
@@ -458,7 +458,7 @@ for i in range(0, 6):
 # TODO: print all even numbers from 2 to 10
 `,
       readOnlyCode: false,
-      requirePeerReview: true,
+      requirePeerReview: false,
       aiMode: "hint",
     },
     {
@@ -762,7 +762,8 @@ app.post(
 );
 
 // Submit an explanation for an explain-to-unlock checkpoint.
-// The AI reviews the explanation and we record whether it is accepted.
+// NOTE (iteration choice): We are NOT using AI evaluation to unlock checkpoints right now.
+// This endpoint just saves the explanation (no AI call).
 app.post(
   "/learning/room/:roomId/checkpoints/:checkpointId/explain",
   authenticateToken,
@@ -793,37 +794,7 @@ app.post(
         return res.status(400).json({ error: "Checkpoint is not explain-to-unlock" });
       }
 
-      // Ask the AI (in review mode) to evaluate the explanation.
-      const reviewPrompt = `A learner wrote the following explanation for this checkpoint.
-
-Checkpoint: ${checkpoint.title}
-Description:
-${checkpoint.description}
-
-Learner explanation:
-${explanation}
-
-Evaluate whether this explanation shows a basic but correct understanding.
-Keep your response short (4–6 sentences). At the end, add a final line:
-ACCEPT: yes
-or
-ACCEPT: no
-`;
-
-      const aiResponseText = await getAiTutorResponse({
-        userQuery: reviewPrompt,
-        language: "plaintext",
-        code: "",
-        input: "",
-        output: "",
-        checkpointType: checkpoint.type,
-        checkpointTitle: checkpoint.title,
-        checkpointDescription: checkpoint.description,
-        aiMode: "review",
-      });
-
-      // Simple parser: look for "ACCEPT: yes" in the AI's response.
-      const accepted = /ACCEPT:\s*yes/i.test(aiResponseText || "");
+      // No AI evaluation: just store the explanation.
 
       const progress = await LearningProgress.findOneAndUpdate(
         {
@@ -835,21 +806,21 @@ ACCEPT: no
         {
           $set: {
             "checkpoints.$.explanationText": explanation,
-            "checkpoints.$.explanationAccepted": accepted,
-            "checkpoints.$.status": accepted ? "completed" : "in_progress",
+            "checkpoints.$.explanationAccepted": null,
+            "checkpoints.$.status": "in_progress",
           },
         },
         { new: true }
       );
 
       res.status(200).json({
-        accepted,
-        feedback: aiResponseText,
+        accepted: null,
+        feedback: null,
         progress,
       });
     } catch (error) {
-      console.error("Error evaluating explanation:", error);
-      res.status(500).json({ error: "Failed to evaluate explanation" });
+      console.error("Error saving explanation:", error);
+      res.status(500).json({ error: "Failed to save explanation" });
     }
   }
 );
@@ -885,36 +856,9 @@ app.post(
 
       const currentCp = module.checkpoints[currentIndex];
 
-      // Fetch all progress docs for this room/module.
-      const progresses = await LearningProgress.find({
-        roomId: room.roomId,
-        moduleId: module.moduleId,
-      }).lean();
-
-      // Count how many users have completed this checkpoint.
-      const completedCount = progresses.reduce((acc, p) => {
-        const cpProg = p.checkpoints.find((cp) => cp.checkpointId === currentCp.checkpointId);
-        if (cpProg && cpProg.status === "completed") {
-          return acc + 1;
-        }
-        return acc;
-      }, 0);
-
-      // For explain-to-unlock, we also require that at least one explanation was accepted.
-      if (currentCp.type === "explain-to-unlock") {
-        const hasAcceptedExplanation = progresses.some((p) => {
-          const cpProg = p.checkpoints.find((cp) => cp.checkpointId === currentCp.checkpointId);
-          return cpProg && cpProg.explanationAccepted;
-        });
-        if (!hasAcceptedExplanation) {
-          return res.status(400).json({ error: "Explanation not yet accepted for this checkpoint" });
-        }
-      }
-
-      // If peer review is required, we require at least two completions.
-      if (currentCp.requirePeerReview && completedCount < 2) {
-        return res.status(400).json({ error: "Not enough peers have completed this checkpoint yet" });
-      }
+      // NOTE (demo-friendly): For now, "Next" is just navigation.
+      // We intentionally do NOT gate progression on completion/peer-review/AI checks,
+      // so teams can traverse checkpoints during early iterations.
 
       // All good: advance the room-level checkpoint index.
       room.currentCheckpointIndex = Math.min(
