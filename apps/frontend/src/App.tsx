@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { RecoilRoot } from 'recoil';
 import Register from "./pages/Register";
 import CodeEditor from "./pages/CodeEditor";
+import LearningRoom from "./pages/LearningRoom";
+import ChooseModule from "./pages/ChooseModule";
 import ProtectedRouter from "./middleWare/ProtectedRouter";
 
 const App = () => {
@@ -22,6 +24,22 @@ const App = () => {
                 <CodeEditor />
               </ProtectedRouter>
             } 
+          />
+          <Route
+            path="/learn/:roomId/choose"
+            element={
+              <ProtectedRouter>
+                <ChooseModule />
+              </ProtectedRouter>
+            }
+          />
+          <Route
+            path="/learn/:roomId"
+            element={
+              <ProtectedRouter>
+                <LearningRoom />
+              </ProtectedRouter>
+            }
           />
         </Routes>
       </Router>

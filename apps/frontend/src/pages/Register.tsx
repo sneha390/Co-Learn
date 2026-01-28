@@ -127,7 +127,7 @@ const Register = () => {
     };
 
     // This is your original, working socket logic
-    const initializeSocket = async (isJoining = false) => {
+    const initializeSocket = async (isJoining = false, learningModuleId?: string) => {
         setError(""); // Clear previous errors
 
         // Check authentication
@@ -171,8 +171,8 @@ const Register = () => {
                 const joinData = await joinResponse.json();
                 finalRoomId = joinData.room.roomId;
             } else {
-                // Create new room - WebSocket will generate roomId
-                // We'll create it after WebSocket connection
+                // For both free-form and learning rooms we let the WebSocket
+                // generate the roomId first, then create/attach on the backend.
             }
         } catch (error) {
             console.error("Error creating/joining room:", error);
@@ -196,23 +196,47 @@ const Register = () => {
                     
                     try {
                         if (!isJoining) {
-                            // Create room in MongoDB for new rooms
-                            const createResponse = await fetch(`http://${IP_ADDRESS}:3000/room/create`, {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    Authorization: `Bearer ${auth.token}`,
-                                },
-                                body: JSON.stringify({
-                                    roomId: roomIdFromServer,
-                                }),
-                            });
+                            // Create or attach the room in MongoDB.
+                            if (learningModuleId) {
+                                // Learning room: attach module + initialize learning progress.
+                                const attachResponse = await fetch(`http://${IP_ADDRESS}:3000/learning/room/create`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        Authorization: `Bearer ${auth.token}`,
+                                    },
+                                    body: JSON.stringify({
+                                        roomId: roomIdFromServer,
+                                        moduleId: learningModuleId,
+                                    }),
+                                });
 
-                            if (!createResponse.ok) {
-                                setError("Failed to create room in database.");
-                                setLoading(false);
-                                ws.close();
-                                return;
+                                if (!attachResponse.ok) {
+                                    const errData = await attachResponse.json().catch(() => ({}));
+                                    setError(errData.error || "Failed to create learning room in database.");
+                                    setLoading(false);
+                                    ws.close();
+                                    return;
+                                }
+                            } else {
+                                // Regular free-form room
+                                const createResponse = await fetch(`http://${IP_ADDRESS}:3000/room/create`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        Authorization: `Bearer ${auth.token}`,
+                                    },
+                                    body: JSON.stringify({
+                                        roomId: roomIdFromServer,
+                                    }),
+                                });
+
+                                if (!createResponse.ok) {
+                                    setError("Failed to create room in database.");
+                                    setLoading(false);
+                                    ws.close();
+                                    return;
+                                }
                             }
                         }
 
@@ -224,7 +248,12 @@ const Register = () => {
                         });
                         setLoading(false);
                         console.log("Server Message: ", data.message);
-                        navigate("/code/" + roomIdFromServer);
+                        // Navigate based on whether this is a learning room or regular room
+                        if (learningModuleId) {
+                            navigate("/learn/" + roomIdFromServer);
+                        } else {
+                            navigate("/code/" + roomIdFromServer);
+                        }
                     } catch (error) {
                         console.error("Error handling room:", error);
                         setError("Failed to process room.");

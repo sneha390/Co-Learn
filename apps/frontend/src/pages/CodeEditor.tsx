@@ -72,6 +72,10 @@ const CodeEditor: React.FC = () => {
   // Chat state
   const [chatId, setChatId] = useState<string>("");
 
+  // Learning room metadata (if this room has been upgraded to a module)
+  const [isLearningRoom, setIsLearningRoom] = useState<boolean>(false);
+  const [learningModuleId, setLearningModuleId] = useState<string | null>(null);
+
   // Sidebar panel state
   const [activePanel, setActivePanel] = useState<"ai" | "chat" | "info" | null>("ai");
 
@@ -101,12 +105,16 @@ const CodeEditor: React.FC = () => {
 
     const fetchRoomData = async () => {
       try {
-        // Get room info for chatId
+        // Get room info for chatId and learning metadata
         const roomResponse = await fetch(`http://${IP_ADDRESS}:3000/room/${effectiveRoomId}`);
         if (roomResponse.ok) {
           const roomData = await roomResponse.json();
           if (roomData.room && roomData.room.chatId) {
             setChatId(roomData.room.chatId);
+          }
+          if (roomData.room) {
+            setIsLearningRoom(!!roomData.room.isLearningRoom);
+            setLearningModuleId(roomData.room.moduleId || null);
           }
         }
 
@@ -219,9 +227,18 @@ const CodeEditor: React.FC = () => {
           setIoSessions(data.ioSessions || [{ id: 1, input: "", output: [] }]); // fallback for older clients
           setActiveIoSessionId(data.activeIoSessionId || 1);
         }
+
+        // When a learning module is started by someone, move everyone to the
+        // learning room view for this room.
+        if (data.type === "enterLearningModule") {
+          const effectiveRoomId = user.roomId || params.roomId;
+          if (effectiveRoomId) {
+            navigate(`/learn/${effectiveRoomId}`);
+          }
+        }
       };
     }
-  }, [code, language, currentButtonState, isLoading, socket, connectedUsers, ioSessions, activeIoSessionId]);
+  }, [code, language, currentButtonState, isLoading, socket, connectedUsers, ioSessions, activeIoSessionId, user.roomId, params.roomId, navigate]);
 
   useEffect(() => {
     aiChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -689,7 +706,7 @@ const CodeEditor: React.FC = () => {
             <span className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>CoLearn Live</span>
             <span className={`text-xs px-2 py-1 rounded-full ${isDark ? "text-gray-500 bg-gray-800" : "text-blue-700 bg-blue-100 border border-blue-200"}`}>Room {user.roomId || "..."}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <button
               onClick={() => handlePanelToggle("ai")}
               className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all duration-200 ${activePanel === 'ai' ? 'bg-blue-600 text-white shadow-md' : (isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300')} hover:scale-105 active:scale-95`}
@@ -708,6 +725,19 @@ const CodeEditor: React.FC = () => {
             >
               <FiUsers /> Members & Room
             </button>
+            {/* Learning section: Learn button that opens the guided module */}
+            <div className="flex flex-col ml-2">
+              <button
+                onClick={() => {
+                  const effectiveRoomId = user.roomId || params.roomId;
+                  if (!effectiveRoomId) return;
+                  navigate(`/learn/${effectiveRoomId}/choose`);
+                }}
+                className={`mt-1 px-3 py-1.5 rounded-md text-xs font-medium ${isDark ? "bg-blue-700 text-white hover:bg-blue-600" : "bg-blue-600 text-white hover:bg-blue-700"} transition-all`}
+              >
+                Learn
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <select

@@ -7,6 +7,11 @@ export interface IRoom extends Document {
   chatId: string;
   notesId: string;
   codeId: string;
+  // Learning-specific fields. These are optional so that existing free-form
+  // collaboration rooms continue to work unchanged.
+  isLearningRoom?: boolean;
+  moduleId?: string | null;
+  currentCheckpointIndex?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +49,24 @@ const RoomSchema: Schema = new Schema(
       type: String,
       required: true,
       ref: 'Code',
+    },
+    // Learning flow metadata. These are nullable so that
+    // existing rooms created before this feature remain valid.
+    isLearningRoom: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    moduleId: {
+      type: String,
+      ref: 'LearningModule',
+      default: null,
+      index: true,
+    },
+    currentCheckpointIndex: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {
